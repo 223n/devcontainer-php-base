@@ -1,0 +1,224 @@
+# ========================================
+# DevContainer PHPベースイメージビルドワークフロー
+# 手動実行専用 - バージョン指定版（Release作成修正版）
+# ========================================
+name: PHPベースイメージのビルドとリリース
+run-name: "ビルドとリリース ${{ inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'バージョン番号 (例: v1.0.3 または 1.0.3)'
+        required: true
+        type: string
+      create_release:
+        description: 'GitHub Releaseを作成する'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: バージョンの検証と正規化
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # v プレフィックスを追加（なければ）
+          if [[ ! "$VERSION" =~ ^v ]]; then
+            VERSION="v${VERSION}"
+          fi
+          
+          # バージョン形式のバリデーション
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ エラー: バージョン形式が不正です"
+            echo "   正しい形式: v1.0.3 または 1.0.3"
+            echo "   入力された値: ${{ github.event.inputs.version }}"
+            exit 1
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_short=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "📌 バージョン: ${VERSION}"
+
+      - name: タグの存在確認
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          if git ls-remote --tags origin | grep -q "refs/tags/${VERSION}$"; then
+            echo "⚠️  警告: タグ ${VERSION} は既に存在します"
+            echo "   既存のタグを上書きします"
+          else
+            echo "✅ タグ ${VERSION} は新規作成されます"
+          fi
+
+      - name: Docker Buildxのセットアップ
+        uses: docker/setup-buildx-action@v3
+
+      - name: Container Registryへのログイン
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: メタデータの抽出
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.version.outputs.version_short }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}},value=${{ steps.version.outputs.version }}
+            type=sha,prefix=sha-
+
+      - name: イメージのビルドとプッシュ
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: バージョンタグの作成とプッシュ
+        if: success()
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 既存のタグを削除（ローカル）
+          git tag -d "${VERSION}" 2>/dev/null || true
+          
+          # バージョンタグを作成
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          
+          # リモートにプッシュ（既存のタグがあれば上書き）
+          git push origin "${VERSION}" --force
+          
+          echo "✅ バージョンタグ ${VERSION} を作成しました"
+
+      - name: latestタグの更新
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 既存のlatestタグを削除（ローカル）
+          git tag -d latest 2>/dev/null || true
+          
+          # 現在のコミットにlatestタグを設定
+          git tag -a latest -m "Latest release: ${{ steps.version.outputs.version }}"
+          
+          # リモートのlatestタグを強制更新
+          git push origin latest --force
+          
+          echo "✅ latestタグを更新しました"
+
+      - name: リリースノートの生成
+        if: success() && github.event.inputs.create_release == 'true'
+        id: release_notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_SHORT="${{ steps.version.outputs.version_short }}"
+          
+          # リリースノートを生成
+          cat > release_notes.md << 'EOF'
+          ## DevContainer PHP Base Image ${{ steps.version.outputs.version }}
+
+          ### 🐳 Docker Image
+
+          ```bash
+          # 完全バージョン指定
+          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version_short }}
+
+          # 最新版
+          docker pull ghcr.io/${{ github.repository }}:latest
+          ```
+
+          ### 📦 使用方法
+
+          **devcontainer.json**
+          ```json
+          {
+            "image": "ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version_short }}",
+            "remoteUser": "vscode"
+          }
+          ```
+
+          ### 📋 変更内容
+
+          詳細は [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) を参照してください。
+
+          ### 🔗 関連リンク
+
+          - [Docker Image](https://github.com/${{ github.repository }}/pkgs/container/devcontainer-php-base)
+          - [コミット履歴](https://github.com/${{ github.repository }}/commits/${{ steps.version.outputs.version }})
+          EOF
+          
+          echo "✅ リリースノートを生成しました"
+
+      - name: GitHub Releaseの作成
+        if: success() && github.event.inputs.create_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # 既存のリリースを削除（存在する場合）
+          gh release delete "${VERSION}" --yes 2>/dev/null || true
+          
+          # 新しいリリースを作成
+          gh release create "${VERSION}" \
+            --title "Release ${VERSION}" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}"
+          
+          echo "✅ GitHub Release ${VERSION} を作成しました"
+
+      - name: サマリー
+        if: success()
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "========================================="
+          echo "✅ リリース完了!"
+          echo "========================================="
+          echo ""
+          echo "📌 バージョン: ${VERSION}"
+          echo ""
+          echo "🐳 Dockerイメージ:"
+          echo "   - ghcr.io/${{ github.repository }}:latest"
+          echo "   - ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version_short }}"
+          echo ""
+          echo "🏷️  Gitタグ:"
+          echo "   - ${VERSION}"
+          echo "   - latest"
+          echo ""
+          if [[ "${{ github.event.inputs.create_release }}" == "true" ]]; then
+            echo "📦 GitHub Release:"
+            echo "   https://github.com/${{ github.repository }}/releases/tag/${VERSION}"
+          fi
+          echo ""

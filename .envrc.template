@@ -1,0 +1,50 @@
+# ========================================
+# 開発環境用環境変数テンプレート
+# このファイルは .envrc にコピーされて使用されます
+# direnv により自動的に環境変数が設定されます
+# ========================================
+
+# 環境識別子
+export ENVIRONMENT=development
+
+# MySQL接続設定（docker-composeで起動するMySQLコンテナ用）
+export MYSQL_HOST=db
+export MYSQL_PORT=3306
+export MYSQL_DATABASE=app
+export MYSQL_USER=app
+export MYSQL_PASSWORD=secret
+
+# PHP設定
+export PHP_MEMORY_LIMIT=256M
+
+# Cloudflare Access設定（開発時はダミー値でOK）
+# 本番環境では Cloudflare Access の設定が必要
+export CF_ACCESS_CLIENT_ID=your-client-id
+export CF_ACCESS_CLIENT_SECRET=your-client-secret
+
+export CLOUDFLARE_ACCOUNT_ID=your-account-id
+export CLOUDFLARE_API_TOKEN=your-api-token
+
+export CF_ACCESS_SERVICE_TOKEN_ID=your-service-token-id
+export CF_ACCESS_SERVICE_TOKEN_SECRET=your-service-token-secret
+
+# デバッグ設定
+export DEBUG=true
+export LOG_LEVEL=debug
+export DEV_EMAIL=your-email@example.com
+
+# ========================================
+# 使用方法
+# ========================================
+# 1. このファイルを .envrc にコピーします
+#    cp .envrc.template .envrc
+#
+# 2. .envrc を編集して実際の値を設定します
+#    nano .envrc
+#
+# 3. direnv を許可します（DevContainer起動時に自動実行されます）
+#    direnv allow
+#
+# 4. ディレクトリに移動すると自動的に環境変数が読み込まれます
+#
+# 注意: .envrc は .gitignore に含まれており、Gitにコミットされません

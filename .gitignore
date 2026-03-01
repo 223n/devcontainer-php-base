@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# PHP
+vendor/
+
+# Environment
+.env
+.envrc
+
+# Claude
+.claude/

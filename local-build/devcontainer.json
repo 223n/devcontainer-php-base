@@ -1,0 +1,59 @@
+{
+  "name": "PHP Development",
+  "runArgs": ["--name", "php-dev"],
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "mounts": [
+    {
+      "source": "devcontainer-php-base-gh-config",
+      "target": "/home/vscode/.config/gh",
+      "type": "volume"
+    },
+    {
+      "source": "devcontainer-php-base-claude-config",
+      "target": "/home/vscode/.claude",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-vendor",
+      "target": "${containerWorkspaceFolder}/vendor",
+      "type": "volume"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "xdebug.php-debug",
+        "eamodio.gitlens",
+        "editorconfig.editorconfig",
+        "usernamehw.errorlens",
+        "yzhang.markdown-all-in-one",
+        "davidanson.vscode-markdownlint",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-mysql",
+        "mkhl.direnv"
+      ]
+    }
+  },
+  "forwardPorts": [8765],
+  "portsAttributes": {
+    "8765": {
+      "label": "CakePHP Dev Server",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "sudo chown vscode:vscode vendor 2>/dev/null || true && composer install --no-interaction 2>/dev/null || true",
+  "postStartCommand": "bash -c 'if [ ! -f .envrc ]; then echo \"📋 .envrcが見つかりません。テンプレートをコピーします...\"; cp .envrc.template .envrc && echo \"✅ .envrcを作成しました。必要に応じて編集してください。\"; fi && direnv allow && echo \"✅ direnvを許可しました。環境変数が自動的に読み込まれます。\" && echo \"DevContainer ready! Run: bin/cake server -p 8765\"'",
+  "remoteUser": "vscode",
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb",
+    "storage": "8gb"
+  }
+}
