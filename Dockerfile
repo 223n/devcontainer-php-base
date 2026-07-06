@@ -1,6 +1,6 @@
 # ========================================
 # カスタムDevContainer PHPベースイメージ
-# Debian 13 (trixie) + PHP 8.4 + Node.js 25
+# Debian 13 (trixie) + PHP 8.5 + Node.js 26
 # User: vscode
 # ========================================
 
@@ -12,7 +12,7 @@ COPY --from=composer/composer:2-bin /composer /usr/bin/composer
 
 # メタデータ
 LABEL org.opencontainers.image.source="https://github.com/223n/devcontainer-php-base"
-LABEL org.opencontainers.image.description="Custom DevContainer PHP base image with PHP 8.4 + Node.js 25 on Debian 13"
+LABEL org.opencontainers.image.description="Custom DevContainer PHP base image with PHP 8.5 + Node.js 26 on Debian 13"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # 非対話的インストールの設定
@@ -20,7 +20,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Node.js バージョン設定
 # NOTE: LTSバージョンは https://nodejs.org/en/download で確認
-ARG NODE_VERSION=25.6.1
+ARG NODE_VERSION=26.4.0
 
 # 基本パッケージのインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -51,24 +51,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# PHP 8.4 + 拡張パッケージのインストール（Debian 13 trixie公式リポジトリ）
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# PHP 8.5 + 拡張パッケージのインストール
+# NOTE: PHP 8.5 は Debian 13 trixie 公式リポジトリに含まれないため、
+#       Ondřej Surý の APT リポジトリ（deb.sury.org）を追加して導入する
+RUN curl -fsSL https://packages.sury.org/php/apt.gpg \
+      -o /usr/share/keyrings/deb.sury.org-php.gpg \
+    && chmod go+r /usr/share/keyrings/deb.sury.org-php.gpg \
+    && printf '%s\n' \
+      "Types: deb" \
+      "URIs: https://packages.sury.org/php/" \
+      "Suites: trixie" \
+      "Components: main" \
+      "Signed-By: /usr/share/keyrings/deb.sury.org-php.gpg" \
+      > /etc/apt/sources.list.d/php.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     # PHP本体
-    php8.4-fpm \
-    php8.4-cli \
+    php8.5-fpm \
+    php8.5-cli \
     # CakePHP 5.x 必須拡張
-    php8.4-intl \
-    php8.4-mbstring \
-    php8.4-xml \
+    php8.5-intl \
+    php8.5-mbstring \
+    php8.5-xml \
     # データベース接続
-    php8.4-mysql \
-    php8.4-sqlite3 \
+    php8.5-mysql \
+    php8.5-sqlite3 \
     # 実用上推奨の拡張
-    php8.4-curl \
-    php8.4-zip \
-    php8.4-gd \
-    php8.4-bcmath \
-    php8.4-opcache \
+    php8.5-curl \
+    php8.5-zip \
+    php8.5-gd \
+    php8.5-bcmath \
+    php8.5-opcache \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -89,7 +102,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js 25 のインストール（公式バイナリを直接ダウンロード）
+# Node.js 26 のインストール（公式バイナリを直接ダウンロード）
 # NOTE: NodeSourceリポジトリのGPG署名（SHA1）がDebian Trixieで拒否されるため、
 #       公式バイナリを直接インストールする方式に変更（2026年2月以降の対応）
 RUN ARCH=$(dpkg --print-architecture) \

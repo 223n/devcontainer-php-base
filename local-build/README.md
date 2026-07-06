@@ -81,7 +81,7 @@ FROM 223n-devcontainer-php-base:latest
 
 # プロジェクト固有のPHP拡張を追加
 RUN sudo apt-get update \
-    && sudo apt-get install -y php8.4-redis \
+    && sudo apt-get install -y php8.5-redis \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
 
