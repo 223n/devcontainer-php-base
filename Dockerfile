@@ -77,11 +77,12 @@ RUN curl -fsSL https://packages.sury.org/php/apt.gpg \
     php8.5-mysql \
     php8.5-sqlite3 \
     # 実用上推奨の拡張
+    # NOTE: PHP 8.5 では OPcache が標準ビルドに統合され php8.5-common に同梱されるため、
+    #       独立した php8.5-opcache パッケージは存在しない（cli/fpm 導入時に自動で有効化）
     php8.5-curl \
     php8.5-zip \
     php8.5-gd \
     php8.5-bcmath \
-    php8.5-opcache \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
