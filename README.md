@@ -20,7 +20,7 @@ CakePHP開発向けカスタムDevContainerベースイメージ
 
 ## 1. 概要
 
-Debian 13（trixie）+ PHP 8.4 + Node.js 25をベースとした
+Debian 13（trixie）+ PHP 8.5 + Node.js 26をベースとした
 CakePHP開発環境用Dockerイメージです。
 
 VS CodeのDevContainer機能で使用することを想定しています。
@@ -32,7 +32,8 @@ MySQL/nginxは含まれていません。
 
 ### 2-1. PHP関連
 
-- PHP 8.4（CLI + FPM）
+- PHP 8.5（CLI + FPM）
+  - Debian 13公式リポジトリには含まれないため、Ondřej Surý のAPTリポジトリ（deb.sury.org）から導入
 - Composer 2.x
 - PHP拡張:
   - intl、mbstring、xml（CakePHP必須）
@@ -53,7 +54,7 @@ MySQL/nginxは含まれていません。
 
 ### 2-3. Node.js関連
 
-- Node.js 25
+- Node.js 26
 - npm（Node.js付属）
 
 ### 2-4. ユーザー設定
@@ -140,7 +141,7 @@ FROM ghcr.io/223n/devcontainer-php-base:latest
 
 # プロジェクト固有のPHP拡張を追加
 RUN sudo apt-get update \
-    && sudo apt-get install -y php8.4-redis \
+    && sudo apt-get install -y php8.5-redis \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/*
 
