@@ -150,7 +150,13 @@ RUN git config --global user.name "223n" \
     && git config --global core.editor "nano"
 
 # gitの安全なディレクトリに追加（vscodeユーザー用）
-RUN git config --global --add safe.directory /workspace
+#
+# 実際のマウント先は devcontainer の既定である /workspaces/<リポジトリ名> で、
+# リポジトリごとに変わる。/workspace を1つ指定しても一度も一致しないため、
+# git が「dubious ownership」で操作を拒む。
+# safe.directory はパスのグロブを解さず、すべてを許可する * のみを受け付ける。
+# 開発コンテナー内は利用者自身の作業領域であるため * を指定する。
+RUN git config --global --add safe.directory '*'
 
 # direnv自動読み込み設定
 RUN echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
